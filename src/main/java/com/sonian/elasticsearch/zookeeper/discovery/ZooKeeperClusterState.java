@@ -163,7 +163,7 @@ public class ZooKeeperClusterState extends AbstractLifecycleComponent<ZooKeeperC
             if (stateBuf == null) {
                 return null;
             }
-            final BytesStreamInput buf = new BytesStreamInput(stateBuf, false);
+            final BytesStreamInput buf = new BytesStreamInput(stateBuf);
             Version stateVersion;
             try {
                 stateVersion = Version.readVersion(buf);
@@ -446,7 +446,7 @@ public class ZooKeeperClusterState extends AbstractLifecycleComponent<ZooKeeperC
 
                 byte[] buf = zooKeeperClient.getLargeNode(path);
                 if (buf != null) {
-                    StreamInput in = new BytesStreamInput(buf, false);
+                    StreamInput in = new BytesStreamInput(buf);
                     in.setVersion(version);
                     return readFrom(in);
                 } else {
