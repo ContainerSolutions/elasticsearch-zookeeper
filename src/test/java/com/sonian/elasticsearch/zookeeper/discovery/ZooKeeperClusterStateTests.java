@@ -114,6 +114,8 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateNew.start();
 
+        zkStateNew.publish(initialState, new NoOpAckListener());
+
         try {
             zkStateNew.retrieve(null);
             assertThat("Should read the state stored by the same minor version", true);
@@ -191,6 +193,8 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
         ZooKeeperClusterState zkStateNew = buildZooKeeperClusterState(nodes, Version.V_1_4_1);
 
         zkStateNew.start();
+
+        zkStateNew.publish(initialState, new NoOpAckListener());
 
         try {
             zkStateNew.retrieve(null);

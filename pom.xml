@@ -112,7 +112,6 @@
                     <includes>
                         <include>**/*Tests.java</include>
                     </includes>
-                    <skipTests>true</skipTests>
                 </configuration>
             </plugin>
             <plugin>
