@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.sonian</groupId>
     <artifactId>elasticsearch-zookeeper</artifactId>
-    <version>1.6.1</version>
+    <version>1.7.0</version>
     <packaging>jar</packaging>
     <description>ZooKeeper plugin for Elasticsearch</description>
     <inceptionYear>2011</inceptionYear>
@@ -30,7 +30,7 @@
     </parent>
 
     <properties>
-        <elasticsearch.version>1.6.1</elasticsearch.version>
+        <elasticsearch.version>1.7.0</elasticsearch.version>
         <zookeeper.version>3.4.6</zookeeper.version>
     </properties>
 
