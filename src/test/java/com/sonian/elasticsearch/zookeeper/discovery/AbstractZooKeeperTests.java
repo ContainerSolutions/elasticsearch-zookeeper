@@ -95,7 +95,7 @@ public abstract class AbstractZooKeeperTests {
         embeddedZooKeeperService.start();
         putDefaultSettings(ImmutableSettings.settingsBuilder()
                 .put(defaultSettings)
-                .put("sonian.elasticsearch.zookeeper.client.host", "localhost:" + embeddedZooKeeperService.port()));
+                .put("sonian.elasticsearch.zookeeper.client.host", "127.0.0.1:" + embeddedZooKeeperService.port()));
 
         zooKeeperFactory = new ZooKeeperFactory(defaultSettings);
         environment = new ZooKeeperEnvironment(defaultSettings, ClusterName.clusterNameFromSettings(defaultSettings));
