@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.sonian</groupId>
     <artifactId>elasticsearch-zookeeper</artifactId>
-    <version>1.7.0</version>
+    <version>1.7.2</version>
     <packaging>jar</packaging>
     <description>ZooKeeper plugin for Elasticsearch</description>
     <inceptionYear>2011</inceptionYear>
