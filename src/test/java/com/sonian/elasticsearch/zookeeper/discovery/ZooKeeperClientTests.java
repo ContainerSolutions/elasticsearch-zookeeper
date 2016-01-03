@@ -16,11 +16,11 @@
 
 package com.sonian.elasticsearch.zookeeper.discovery;
 
-import com.sonian.elasticsearch.zookeeper.client.ZooKeeperClientException;
-import org.elasticsearch.ElasticsearchException;
 import com.sonian.elasticsearch.zookeeper.client.AbstractNodeListener;
 import com.sonian.elasticsearch.zookeeper.client.ZooKeeperClient;
-import org.elasticsearch.common.settings.ImmutableSettings;
+import com.sonian.elasticsearch.zookeeper.client.ZooKeeperClientException;
+import org.elasticsearch.ElasticsearchException;
+import org.elasticsearch.common.settings.Settings;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -33,7 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.hamcrest.MatcherAssert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 /**
@@ -307,10 +307,10 @@ public class ZooKeeperClientTests extends AbstractZooKeeperTests {
             largeData[i] = (byte) (i % 119);
         }
 
-        ZooKeeperClient zk1 = buildZooKeeper(ImmutableSettings.settingsBuilder().put("zookeeper.maxnodesize", 1000000).build());
+        ZooKeeperClient zk1 = buildZooKeeper(Settings.settingsBuilder().put("zookeeper.maxnodesize", 1000000).build());
         String path = zk1.createLargeSequentialNode("/tests/large-node_", largeData);
 
-        ZooKeeperClient zk2 = buildZooKeeper(ImmutableSettings.settingsBuilder().put("zookeeper.maxnodesize", 100000).build());
+        ZooKeeperClient zk2 = buildZooKeeper(Settings.settingsBuilder().put("zookeeper.maxnodesize", 100000).build());
         byte[] largeDataCreated = zk2.getLargeNode(path);
         assertThat(largeDataCreated.length, equalTo(largeData.length));
         for (int i = 0; i < largeDataCreated.length; i++) {

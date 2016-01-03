@@ -18,10 +18,10 @@
 package com.sonian.elasticsearch.zookeeper.discovery;
 
 import org.elasticsearch.common.io.Streams;
-import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.http.HttpServerTransport;
-import org.elasticsearch.node.internal.InternalNode;
+import org.elasticsearch.node.Node;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.URL;
-import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -43,7 +42,7 @@ public class ZooKeeperStatusTests extends AbstractZooKeeperNodeTests {
         startZooKeeper();
         buildNode("node1");
         node("node1").start();
-        InternalNode node = (InternalNode) node("node1");
+        Node node = node("node1");
         HttpServerTransport transport = node.injector().getInstance(HttpServerTransport.class);
         InetSocketAddress address = ((InetSocketTransportAddress) transport.boundAddress().publishAddress()).address();
         URL url = new URL("http", address.getHostName(), address.getPort(), "/_zookeeper/status?timeout=1s");
@@ -59,7 +58,7 @@ public class ZooKeeperStatusTests extends AbstractZooKeeperNodeTests {
         node("node1").start();
         buildNode("node2");
         node("node2").start();
-        InternalNode node = (InternalNode) node("node1");
+        Node node = node("node1");
         HttpServerTransport transport = node.injector().getInstance(HttpServerTransport.class);
         InetSocketAddress address = ((InetSocketTransportAddress) transport.boundAddress().publishAddress()).address();
         URL url = new URL("http", address.getHostName(), address.getPort(), "/_zookeeper/status/node2?timeout=1s");
@@ -68,13 +67,13 @@ public class ZooKeeperStatusTests extends AbstractZooKeeperNodeTests {
 
     @Test
     public void testZooKeeperConnectionWithZooKeeperDisabled() throws Exception {
-        buildNode("node1", ImmutableSettings.settingsBuilder()
+        buildNode("node1", Settings.settingsBuilder()
                 .put("sonian.elasticsearch.zookeeper.discovery.state_publishing.enabled", false)
                 .put("sonian.elasticsearch.zookeeper.settings.enabled", false)
                 .put("discovery.type", "local")
         );
         node("node1").start();
-        InternalNode node = (InternalNode) node("node1");
+        Node node = node("node1");
         HttpServerTransport transport = node.injector().getInstance(HttpServerTransport.class);
         InetSocketAddress address = ((InetSocketTransportAddress) transport.boundAddress().publishAddress()).address();
         URL url = new URL("http", address.getHostName(), address.getPort(), "/_zookeeper/status?timeout=1s");

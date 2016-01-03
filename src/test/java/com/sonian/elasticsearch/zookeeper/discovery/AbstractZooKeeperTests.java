@@ -21,7 +21,6 @@ import com.sonian.elasticsearch.zookeeper.client.ZooKeeperClientService;
 import com.sonian.elasticsearch.zookeeper.client.ZooKeeperEnvironment;
 import com.sonian.elasticsearch.zookeeper.client.ZooKeeperFactory;
 import com.sonian.elasticsearch.zookeeper.discovery.embedded.EmbeddedZooKeeperService;
-
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.cluster.ClusterState;
@@ -32,8 +31,6 @@ import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
-import org.elasticsearch.common.network.NetworkUtils;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.discovery.Discovery;
 import org.elasticsearch.discovery.zen.DiscoveryNodesProvider;
@@ -47,7 +44,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
+import static org.elasticsearch.common.settings.Settings.settingsBuilder;
 
 /**
  * @author imotov
@@ -60,9 +57,10 @@ public abstract class AbstractZooKeeperTests {
 
     protected final List<ZooKeeperClient> zooKeeperClients = new ArrayList<ZooKeeperClient>();
 
-    private Settings defaultSettings = ImmutableSettings
+    private Settings defaultSettings = Settings
             .settingsBuilder()
             .put("cluster.name", "test-cluster-local")
+            .put("path.home", ".")
             .build();
 
     private ZooKeeperEnvironment environment;
@@ -74,7 +72,7 @@ public abstract class AbstractZooKeeperTests {
     }
 
     public void putDefaultSettings(Settings settings) {
-        defaultSettings = ImmutableSettings.settingsBuilder().put(defaultSettings).put(settings).build();
+        defaultSettings = Settings.settingsBuilder().put(defaultSettings).put(settings).build();
     }
 
 
@@ -85,7 +83,7 @@ public abstract class AbstractZooKeeperTests {
     public void startZooKeeper(boolean cleanDirectory) throws IOException, InterruptedException {
         Environment tempEnvironment = new Environment(defaultSettings);
         if (cleanDirectory) {
-            File zooKeeperDataDirectory = new File(tempEnvironment.dataFiles()[0], "zookeeper");
+            File zooKeeperDataDirectory = new File(tempEnvironment.dataFiles()[0].toFile(), "zookeeper");
             logger.info("Deleting zookeeper directory {}", zooKeeperDataDirectory);
             if (deleteDirectory(zooKeeperDataDirectory)) {
                 logger.info("Zookeeper directory {} was deleted", zooKeeperDataDirectory);
@@ -93,7 +91,7 @@ public abstract class AbstractZooKeeperTests {
         }
         embeddedZooKeeperService = new EmbeddedZooKeeperService(defaultSettings, tempEnvironment);
         embeddedZooKeeperService.start();
-        putDefaultSettings(ImmutableSettings.settingsBuilder()
+        putDefaultSettings(Settings.settingsBuilder()
                 .put(defaultSettings)
                 .put("sonian.elasticsearch.zookeeper.client.host", "127.0.0.1:" + embeddedZooKeeperService.port()));
 
@@ -127,13 +125,11 @@ public abstract class AbstractZooKeeperTests {
     }
 
     public ZooKeeperClient buildZooKeeper() {
-        return buildZooKeeper(ImmutableSettings.Builder.EMPTY_SETTINGS);
+        return buildZooKeeper(Settings.Builder.EMPTY_SETTINGS);
     }
 
     public ZooKeeperClient buildZooKeeper(Settings settings) {
-        String settingsSource = getClass().getName().replace('.', '/') + ".yml";
         Settings finalSettings = settingsBuilder()
-                .loadFromClasspath(settingsSource)
                 .put(defaultSettings)
                 .put(settings)
                 .build();
@@ -283,6 +279,34 @@ public abstract class AbstractZooKeeperTests {
 
         @Override
         public void onTimeout() {
+        }
+    }
+
+    private static AllocationId buildAllocationId(ShardRoutingState state) {
+        switch (state) {
+            case UNASSIGNED:
+                return null;
+            case INITIALIZING:
+            case STARTED:
+                return AllocationId.newInitializing();
+            case RELOCATING:
+                AllocationId allocationId = AllocationId.newInitializing();
+                return AllocationId.newRelocation(allocationId);
+            default:
+                throw new IllegalStateException("illegal state");
+        }
+    }
+
+    private static UnassignedInfo buildUnassignedInfo(ShardRoutingState state) {
+        switch (state) {
+            case UNASSIGNED:
+            case INITIALIZING:
+                return new UnassignedInfo(UnassignedInfo.Reason.INDEX_REOPENED, "auto generated for test");
+            case STARTED:
+            case RELOCATING:
+                return null;
+            default:
+                throw new IllegalStateException("illegal state");
         }
     }
 

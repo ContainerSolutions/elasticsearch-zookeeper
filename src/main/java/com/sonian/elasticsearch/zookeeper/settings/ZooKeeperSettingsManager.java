@@ -18,29 +18,25 @@
 package com.sonian.elasticsearch.zookeeper.settings;
 
 import com.sonian.elasticsearch.zookeeper.client.ZooKeeperClientService;
+import com.sonian.elasticsearch.zookeeper.client.ZooKeeperEnvironment;
+import com.sonian.elasticsearch.zookeeper.client.ZooKeeperFactory;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.cluster.ClusterName;
-import org.elasticsearch.common.Classes;
-import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
-import org.elasticsearch.common.io.Streams;
 import org.elasticsearch.common.logging.Loggers;
 import org.elasticsearch.common.logging.log4j.LogConfigurator;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.loader.SettingsLoader;
 import org.elasticsearch.common.settings.loader.SettingsLoaderFactory;
-import com.sonian.elasticsearch.zookeeper.client.ZooKeeperEnvironment;
-import com.sonian.elasticsearch.zookeeper.client.ZooKeeperFactory;
-import org.elasticsearch.env.Environment;
 import org.elasticsearch.node.internal.InternalSettingsPreparer;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Map;
 
-import static org.elasticsearch.common.settings.ImmutableSettings.Builder.EMPTY_SETTINGS;
+import static org.elasticsearch.common.settings.Settings.Builder.EMPTY_SETTINGS;
 
 /**
  * @author imotov
@@ -83,7 +79,7 @@ public final class ZooKeeperSettingsManager extends AbstractLifecycleComponent<Z
         ZooKeeperSettingsManager settingsManager = new ZooKeeperSettingsManager(settings);
         try {
             settingsManager.start();
-            return ImmutableSettings.settingsBuilder()
+            return Settings.settingsBuilder()
                     .put(settingsManager.loadGlobalSettings())
                     .put(settingsManager.loadClusterSettings())
                     .build();
@@ -92,7 +88,7 @@ public final class ZooKeeperSettingsManager extends AbstractLifecycleComponent<Z
         } finally {
             settingsManager.close();
         }
-        return ImmutableSettings.Builder.EMPTY_SETTINGS;
+        return Settings.Builder.EMPTY_SETTINGS;
     }
 
     private Map<String, String> loadGlobalSettings() throws InterruptedException {
@@ -178,9 +174,7 @@ public final class ZooKeeperSettingsManager extends AbstractLifecycleComponent<Z
             return;
         }
 
-        Tuple<Settings, Environment> initialSettings = InternalSettingsPreparer.prepareSettings(EMPTY_SETTINGS, true);
-
-        Settings settings = InternalSettingsPreparer.prepareSettings(initialSettings.v1(), true).v1();
+        Settings settings = InternalSettingsPreparer.prepareSettings(EMPTY_SETTINGS);
 
         setupLogging(settings);
         Loggers.disableConsoleLogging();
@@ -208,8 +202,8 @@ public final class ZooKeeperSettingsManager extends AbstractLifecycleComponent<Z
 
     private static void setupLogging(Settings settings) {
         try {
-            Classes.getDefaultClassLoader().loadClass("org.apache.log4j.Logger");
-            LogConfigurator.configure(settings);
+            ClassLoader.getSystemClassLoader().loadClass("org.apache.log4j.Logger");
+            LogConfigurator.configure(settings, true);
         } catch (ClassNotFoundException e) {
             // no log4j
         } catch (NoClassDefFoundError e) {
@@ -221,9 +215,8 @@ public final class ZooKeeperSettingsManager extends AbstractLifecycleComponent<Z
     }
 
     private static byte[] loadSettingsFile(String path) {
-        File file = new File(path);
         try {
-            return Streams.copyToByteArray(file);
+            return Files.readAllBytes(Paths.get(path));
         } catch (IOException ex) {
             throw new ElasticsearchException("Cannot load settings file " + path, ex);
         }

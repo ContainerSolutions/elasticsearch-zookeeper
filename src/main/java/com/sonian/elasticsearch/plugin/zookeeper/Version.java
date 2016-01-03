@@ -77,6 +77,6 @@ public class Version {
     }
 
     public static void main(String[] args) {
-        System.out.println("Elasticsearch ZooKeeper Plugin Version: " + number + " (" + date() + "), JVM: " + JvmInfo.jvmInfo().vmVersion());
+        System.out.println("Elasticsearch ZooKeeper Plugin Version: " + number + " (" + date() + "), JVM: " + JvmInfo.jvmInfo().getVmVersion());
     }
 }

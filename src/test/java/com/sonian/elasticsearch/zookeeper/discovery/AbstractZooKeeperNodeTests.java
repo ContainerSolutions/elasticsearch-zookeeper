@@ -17,18 +17,17 @@
 package com.sonian.elasticsearch.zookeeper.discovery;
 
 import org.elasticsearch.client.Client;
-import org.elasticsearch.common.settings.ImmutableSettings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.node.Node;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
-import static org.elasticsearch.common.collect.Maps.newHashMap;
-import static org.elasticsearch.common.settings.ImmutableSettings.Builder.EMPTY_SETTINGS;
-import static org.elasticsearch.common.settings.ImmutableSettings.settingsBuilder;
+import static org.elasticsearch.common.settings.Settings.Builder.EMPTY_SETTINGS;
+import static org.elasticsearch.common.settings.Settings.settingsBuilder;
 import static org.elasticsearch.node.NodeBuilder.nodeBuilder;
 
 /**
@@ -37,9 +36,9 @@ public class AbstractZooKeeperNodeTests extends AbstractZooKeeperTests {
 
     protected Random rand = new Random();
 
-    private Map<String, Node> nodes = newHashMap();
+    private Map<String, Node> nodes = new HashMap<>();
 
-    private Map<String, Client> clients = newHashMap();
+    private Map<String, Client> clients =  new HashMap<>();
 
     public Node buildNode(String id) {
         return buildNode(id, EMPTY_SETTINGS);
@@ -52,7 +51,7 @@ public class AbstractZooKeeperNodeTests extends AbstractZooKeeperTests {
     public Node buildNode(String id, Settings settings) {
         String settingsSource = getClass().getName().replace('.', '/') + ".yml";
         Settings finalSettings = settingsBuilder()
-                .loadFromClasspath(settingsSource)
+                .loadFromStream(settingsSource, getClass().getResourceAsStream(settingsSource))
                 .put(defaultSettings())
                 .put(settings)
                 .put("name", id)
@@ -92,7 +91,7 @@ public class AbstractZooKeeperNodeTests extends AbstractZooKeeperTests {
 
     @BeforeClass
     public void addDefaultSettings() {
-        putDefaultSettings(ImmutableSettings.settingsBuilder()
+        putDefaultSettings(Settings.settingsBuilder()
                 .put(defaultSettings())
                 .put("sonian.elasticsearch.zookeeper.discovery.state_publishing.enabled", true)
                 .put("discovery.type", ZooKeeperDiscoveryModule.class.getName())

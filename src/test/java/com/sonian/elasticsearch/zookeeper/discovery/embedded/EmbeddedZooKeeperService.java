@@ -43,7 +43,7 @@ public class EmbeddedZooKeeperService extends AbstractLifecycleComponent<Embedde
         super(settings);
         try {
             zooKeeperServer = new ZooKeeperServer();
-            File zooKeeperDir = new File(environment.dataFiles()[0], "zookeeper");
+            File zooKeeperDir = new File(environment.dataFiles()[0].toFile(), "zookeeper");
             FileTxnSnapLog fileTxnSnapLog = new FileTxnSnapLog(zooKeeperDir, zooKeeperDir);
             zooKeeperServer.setTxnLogFactory(fileTxnSnapLog);
             zooKeeperServer.setTickTime(ZooKeeperServer.DEFAULT_TICK_TIME);

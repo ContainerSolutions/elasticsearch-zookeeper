@@ -16,11 +16,12 @@
 
 package com.sonian.elasticsearch.zookeeper.discovery;
 
+import com.google.common.collect.UnmodifiableIterator;
+import com.sonian.elasticsearch.zookeeper.client.AbstractNodeListener;
 import com.sonian.elasticsearch.zookeeper.client.ZooKeeperClient;
 import com.sonian.elasticsearch.zookeeper.client.ZooKeeperClientSessionExpiredException;
 import com.sonian.elasticsearch.zookeeper.client.ZooKeeperEnvironment;
 import org.elasticsearch.ElasticsearchException;
-import org.elasticsearch.Version;
 import org.elasticsearch.cluster.*;
 import org.elasticsearch.cluster.block.ClusterBlocks;
 import org.elasticsearch.cluster.metadata.MetaData;
@@ -31,11 +32,10 @@ import org.elasticsearch.cluster.routing.RoutingService;
 import org.elasticsearch.cluster.routing.RoutingTable;
 import org.elasticsearch.common.Priority;
 import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.collect.Sets;
 import org.elasticsearch.common.component.AbstractLifecycleComponent;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.inject.internal.Nullable;
-import org.elasticsearch.common.io.stream.BytesStreamInput;
+import org.elasticsearch.common.io.stream.ByteBufferStreamInput;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
@@ -47,9 +47,9 @@ import org.elasticsearch.discovery.zen.publish.PublishClusterStateAction;
 import org.elasticsearch.node.service.NodeService;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
-import com.sonian.elasticsearch.zookeeper.client.AbstractNodeListener;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -117,7 +117,7 @@ public class ZooKeeperDiscovery extends AbstractLifecycleComponent<Discovery> im
         this.zooKeeperClient = zooKeeperClient;
         this.threadPool = threadPool;
         this.environment = environment;
-        if (componentSettings.getAsBoolean("state_publishing.enabled", false)) {
+        if (settings.getAsBoolean("state_publishing.enabled", false)) {
             statePublisher = new ZooKeeperStatePublisher(settings, environment, zooKeeperClient, this);
         } else {
             statePublisher = new ZenStatePublisher(settings, transportService, this, new NewClusterStateListener(), discoverySettings, clusterName);
@@ -198,7 +198,7 @@ public class ZooKeeperDiscovery extends AbstractLifecycleComponent<Discovery> im
         //TODO: Implement eager rerouting when node leaves the cluster
     }
 
-    @Override public void publish(ClusterState clusterState, AckListener ackListener) {
+    @Override public void publish(ClusterChangedEvent clusterChangedEvent, AckListener ackListener) {
         if (!master) {
             logger.warn("Shouldn't publish state when not master");
         }
@@ -212,8 +212,9 @@ public class ZooKeeperDiscovery extends AbstractLifecycleComponent<Discovery> im
                 logger.warn("No longer a master, shouldn't publish new state");
                 return;
             }
-            latestDiscoNodes = clusterState.nodes();
-            statePublisher.publish(clusterState, ackListener);
+            ClusterState newClusterState = clusterChangedEvent.state();
+            latestDiscoNodes = newClusterState.nodes();
+            statePublisher.publish(clusterChangedEvent, ackListener);
         } catch (ZooKeeperClientSessionExpiredException ex) {
             // Ignore
         } catch (Exception ex) {
@@ -443,7 +444,11 @@ public class ZooKeeperDiscovery extends AbstractLifecycleComponent<Discovery> im
             @Override
             public ClusterState execute(ClusterState currentState) {
                 try {
-                    Set<String> currentNodes = Sets.newHashSet(latestDiscoNodes.nodes().keysIt());
+                    final Set<String> currentNodes = new HashSet<>();
+                    UnmodifiableIterator<String> iterator = latestDiscoNodes.nodes().keysIt();
+                    while (iterator.hasNext()) {
+                        currentNodes.add(iterator.next());
+                    }
                     Set<String> deleted = new HashSet<String>(currentNodes);
                     deleted.removeAll(nodes);
                     Set<String> added = new HashSet<String>(nodes);
@@ -529,7 +534,7 @@ public class ZooKeeperDiscovery extends AbstractLifecycleComponent<Discovery> im
                     StringBuilder sb = new StringBuilder("Received new state, but not part of the state:\nversion [").append(clusterState.version()).append("]\n");
                     sb.append(clusterState.nodes().prettyPrint());
                     sb.append(clusterState.routingTable().prettyPrint());
-                    sb.append(clusterState.readOnlyRoutingNodes().prettyPrint());
+                    sb.append(clusterState.getRoutingNodes().prettyPrint());
                     logger.trace(sb.toString());
                 } else if (logger.isDebugEnabled()) {
                     logger.debug("Received new state, but not part of the state");
@@ -571,7 +576,8 @@ public class ZooKeeperDiscovery extends AbstractLifecycleComponent<Discovery> im
         try {
             byte[] buf = zooKeeperClient.getNode(nodePath(id), null);
             if (buf != null) {
-                return DiscoveryNode.readNode(new BytesStreamInput(buf));
+                ByteBuffer bb = ByteBuffer.wrap(buf);
+                return DiscoveryNode.readNode(new ByteBufferStreamInput(bb));
             } else {
                 return null;
             }
@@ -646,7 +652,7 @@ public class ZooKeeperDiscovery extends AbstractLifecycleComponent<Discovery> im
 
         void stop();
 
-        void publish(ClusterState clusterState, AckListener ackListener);
+        void publish(ClusterChangedEvent clusterChangedEvent, AckListener ackListener);
 
         void addMaster(String masterNodeId) throws InterruptedException;
 
@@ -671,10 +677,10 @@ public class ZooKeeperDiscovery extends AbstractLifecycleComponent<Discovery> im
             zooKeeperClusterState.stop();
         }
 
-        @Override public void publish(ClusterState clusterState, AckListener ackListener) {
+        @Override public void publish(ClusterChangedEvent clusterChangedEvent, AckListener ackListener) {
             try {
                 // ignore the ack. rely on zk to handle distribution.
-                zooKeeperClusterState.publish(clusterState, ackListener);
+                zooKeeperClusterState.publish(clusterChangedEvent, ackListener);
             } catch (InterruptedException ex) {
                 Thread.currentThread().interrupt();
             }
@@ -699,7 +705,7 @@ public class ZooKeeperDiscovery extends AbstractLifecycleComponent<Discovery> im
 
         public ZenStatePublisher(Settings settings, TransportService transportService, DiscoveryNodesProvider nodesProvider,
                                  NewClusterStateListener listener, DiscoverySettings discoverySettings, ClusterName clusterName) {
-            publishClusterState = new PublishClusterStateAction(settings, transportService, nodesProvider, listener, discoverySettings, clusterName);
+            publishClusterState = new PublishClusterStateAction(settings, transportService, nodesProvider, listener, discoverySettings);
         }
 
         @Override public void start() {
@@ -708,8 +714,8 @@ public class ZooKeeperDiscovery extends AbstractLifecycleComponent<Discovery> im
         @Override public void stop() {
         }
 
-        @Override public void publish(ClusterState clusterState, AckListener ackListener) {
-            publishClusterState.publish(clusterState, ackListener);
+        @Override public void publish(ClusterChangedEvent clusterChangedEvent, AckListener ackListener) {
+            publishClusterState.publish(clusterChangedEvent, ackListener);
         }
 
         @Override public void addMaster(String masterNodeId) throws InterruptedException {

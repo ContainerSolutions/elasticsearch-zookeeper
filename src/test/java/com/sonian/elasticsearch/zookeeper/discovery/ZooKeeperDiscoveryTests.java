@@ -17,7 +17,6 @@
 package com.sonian.elasticsearch.zookeeper.discovery;
 
 import com.sonian.elasticsearch.zookeeper.client.ZooKeeperClient;
-
 import org.elasticsearch.Version;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthStatus;
@@ -30,10 +29,9 @@ import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
 import org.elasticsearch.cluster.routing.RoutingTable;
-import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.node.Node;
-import org.elasticsearch.node.internal.InternalNode;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -43,9 +41,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.elasticsearch.common.xcontent.XContentFactory.*;
-import static org.hamcrest.MatcherAssert.*;
-import static org.hamcrest.Matchers.*;
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
 
 
 /**
@@ -68,7 +67,8 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
         Node node = buildNode("node1");
         final CountDownLatch latch = new CountDownLatch(1);
         clusterService("node1").add(new ClusterStateListener() {
-            @Override public void clusterChanged(ClusterChangedEvent event) {
+            @Override
+            public void clusterChanged(ClusterChangedEvent event) {
                 if (event.localNodeMaster()) {
                     latch.countDown();
                 }
@@ -76,7 +76,7 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
         });
         node.start();
         assertThat(latch.await(1, TimeUnit.SECONDS), equalTo(true));
-        node.stop();
+        node.close();
     }
 
     @Test public void testTwoNodeStartup() throws Exception {
@@ -106,9 +106,9 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
         node2.start();
         assertThat(latch21.await(1, TimeUnit.SECONDS), equalTo(true));
         assertThat(latch22.getCount(), equalTo(1L));
-        node1.stop();
+        node1.close();
         assertThat(latch22.await(1, TimeUnit.SECONDS), equalTo(true));
-        node2.stop();
+        node2.close();
     }
 
     @Test public void testJoinAndLeave() throws Exception {
@@ -157,18 +157,18 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
         // Wait for the node 2 and 3 to start
         assertThat(latch2.await(1, TimeUnit.SECONDS), equalTo(true));
         assertThat(latch3.await(1, TimeUnit.SECONDS), equalTo(true));
-        node3.stop();
+        node3.close();
         // Wait for the node 3 to disappear from master
         assertThat(latch1Node3Gone.await(1, TimeUnit.SECONDS), equalTo(true));
         // Wait for the node 3 to disappear from node 2
         assertThat(latch2Node3Gone.await(1, TimeUnit.SECONDS), equalTo(true));
-        node1.stop();
-        node2.stop();
+        node1.close();
+        node2.close();
     }
 
 
     @Test public void testClientCannotBecomeMaster() throws Exception {
-        buildNode("client", ImmutableSettings.settingsBuilder()
+        buildNode("client", Settings.settingsBuilder()
                 .put("node.client", true)
                 .put("discovery.initial_state_timeout", 100, TimeUnit.MILLISECONDS)
         );
@@ -198,7 +198,7 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
                 return event.state().nodes().masterNode() == null;
             }
         });
-        node("node1").stop();
+        node("node1").close();
         clientState = clientMonitor.await();
         assertThat(clientState.nodes().masterNode(), nullValue());
 
@@ -209,7 +209,7 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
     }
 
     @Test public void testMasterReelection() throws Exception {
-        buildNode("client", ImmutableSettings.settingsBuilder()
+        buildNode("client", Settings.settingsBuilder()
                 .put("node.client", true)
                 .put("discovery.initial_state_timeout", 100, TimeUnit.MILLISECONDS)
         );
@@ -249,7 +249,7 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
                 return event.state().nodes().masterNode() != null;
             }
         });
-        node("node1").stop();
+        node("node1").close();
         assertThat(clientMonitor.await().nodes().masterNode().name(), equalTo("node2"));
     }
 
@@ -260,11 +260,11 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
         ClusterState initialState = testClusterState(routingTable, nodes);
         ZooKeeperClusterState zkStateOld = buildZooKeeperClusterState(nodes, Version.V_0_18_0);
         zkStateOld.start();
-        zkStateOld.publish(initialState, new NoOpAckListener());
-        zkStateOld.stop();
+        zkStateOld.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
+        zkStateOld.close();
 
         // Create a client node
-        buildNode("client", ImmutableSettings.settingsBuilder()
+        buildNode("client", Settings.settingsBuilder()
                 .put("node.client", true)
                 .put("discovery.initial_state_timeout", 100, TimeUnit.MILLISECONDS)
         );
@@ -399,7 +399,7 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
         buildNode("node1");
         buildNode("node2");
         buildNode("node3");
-        buildNode("node4", ImmutableSettings.settingsBuilder()
+        buildNode("node4", Settings.settingsBuilder()
                 .put("node.master", false)
         );
 
@@ -501,7 +501,7 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
             buildNode("node" + i).start();
         }
 
-        buildNode("client", ImmutableSettings.settingsBuilder()
+        buildNode("client", Settings.settingsBuilder()
                 .put("node.client", true)
                 .put("discovery.initial_state_timeout", 1000, TimeUnit.MILLISECONDS)
         ).start();
@@ -574,7 +574,7 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
     @Test public void testNewMasterShouldPreserveState() throws Exception {
         buildNode("node1");
         buildNode("node2");
-        buildNode("node3", ImmutableSettings.settingsBuilder()
+        buildNode("node3", Settings.settingsBuilder()
                 .put("node.master", false)
         );
 
@@ -611,7 +611,7 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
                 return event.state().nodes().masterNode() != null;
             }
         });
-        node("node1").stop();
+        node("node1").close();
         ClusterState state = nodeMonitor.await();
         assertThat(state.nodes().masterNode().name(), equalTo("node2"));
         assertThat(nodeExists("node3", state), equalTo(true));
@@ -652,18 +652,18 @@ public class ZooKeeperDiscoveryTests extends AbstractZooKeeperNodeTests {
     private void restartNode(int nodeCount) throws InterruptedException {
         int nodeToRestart = rand.nextInt(nodeCount);
         logger.info("Restarting node [{}]", nodeToRestart);
-        node("node" + nodeToRestart).stop();
+        node("node" + nodeToRestart).close();
         Thread.sleep(200);
         node("node" + nodeToRestart).start();
     }
 
     private ClusterService clusterService(String id) {
-        InternalNode node = (InternalNode) node(id);
+        Node node = node(id);
         return node.injector().getInstance(ClusterService.class);
     }
 
     private ZooKeeperClient zooKeeperClient(String id) {
-        InternalNode node = (InternalNode) node(id);
+        Node node = node(id);
         return node.injector().getInstance(ZooKeeperClient.class);
     }
 

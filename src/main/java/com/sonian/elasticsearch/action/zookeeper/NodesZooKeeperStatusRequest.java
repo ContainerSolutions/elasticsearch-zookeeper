@@ -16,12 +16,12 @@
 
 package com.sonian.elasticsearch.action.zookeeper;
 
-import org.elasticsearch.action.support.nodes.NodesOperationRequest;
+import org.elasticsearch.action.support.nodes.BaseNodesRequest;
 import org.elasticsearch.common.unit.TimeValue;
 
 /**
  */
-public class NodesZooKeeperStatusRequest extends NodesOperationRequest<NodesZooKeeperStatusRequest> {
+public class NodesZooKeeperStatusRequest extends BaseNodesRequest<NodesZooKeeperStatusRequest> {
 
     private TimeValue zooKeeperTimeout = TimeValue.timeValueSeconds(10);
 

@@ -18,14 +18,14 @@ package com.sonian.elasticsearch.zookeeper.discovery;
 
 import com.sonian.elasticsearch.zookeeper.client.ZooKeeperClient;
 import com.sonian.elasticsearch.zookeeper.client.ZooKeeperIncompatibleStateVersionException;
-
 import org.elasticsearch.Version;
+import org.elasticsearch.cluster.ClusterChangedEvent;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.node.DiscoveryNodes;
-import org.elasticsearch.cluster.routing.*;
-import org.elasticsearch.common.io.ByteStreams;
+import org.elasticsearch.cluster.routing.RoutingTable;
 import org.elasticsearch.common.io.stream.BytesStreamOutput;
-import org.elasticsearch.common.settings.ImmutableSettings;
+import org.elasticsearch.common.io.stream.InputStreamStreamInput;
+import org.elasticsearch.common.settings.Settings;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -52,7 +52,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
     }
 
     public ZooKeeperClusterStateTests() {
-        putDefaultSettings(ImmutableSettings.settingsBuilder().put("zookeeper.maxnodesize", 10).build());
+        putDefaultSettings(Settings.settingsBuilder().put("zookeeper.maxnodesize", 10).build());
     }
 
     @Test
@@ -65,7 +65,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkState.start();
 
-        zkState.publish(initialState, new NoOpAckListener());
+        zkState.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
 
         final CountDownLatch latch = new CountDownLatch(1);
 
@@ -84,7 +84,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
                 .version(1235L)
                 .build();
 
-        zkState.publish(secondVersion, new NoOpAckListener());
+        zkState.publish(new ClusterChangedEvent("", secondVersion, initialState), new NoOpAckListener());
 
         retrievedState = zkState.retrieve(null);
 
@@ -106,7 +106,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateOld.start();
 
-        zkStateOld.publish(initialState, new NoOpAckListener());
+        zkStateOld.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
 
         zkStateOld.stop();
 
@@ -114,7 +114,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateNew.start();
 
-        zkStateNew.publish(initialState, new NoOpAckListener());
+        zkStateNew.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
 
         try {
             zkStateNew.retrieve(null);
@@ -137,7 +137,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateOld.start();
 
-        zkStateOld.publish(initialState, new NoOpAckListener());
+        zkStateOld.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
 
         zkStateOld.stop();
 
@@ -159,7 +159,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
         zkStateNew.syncClusterState();
 
         // Make sure that new start can be published now
-        zkStateNew.publish(initialState, new NoOpAckListener());
+        zkStateNew.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
 
         zkStateNew.stop();
 
@@ -186,7 +186,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateOld.start();
 
-        zkStateOld.publish(initialState, new NoOpAckListener());
+        zkStateOld.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
 
         zkStateOld.stop();
 
@@ -194,7 +194,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateNew.start();
 
-        zkStateNew.publish(initialState, new NoOpAckListener());
+        zkStateNew.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
 
         try {
             zkStateNew.retrieve(null);
@@ -219,7 +219,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
         buf.writeLong(1234);
         for (String part : Arrays.asList("routingTable", "discoveryNodes", "metaData", "clusterBlocks")) {
             String path = zk.createLargeSequentialNode(statePath + "/" + part + "_",
-                    ByteStreams.toByteArray(getClass().getResourceAsStream(part)));
+                    new InputStreamStreamInput(getClass().getResourceAsStream(part)).readByteArray());
             buf.writeString(path);
         }
         zk.setOrCreatePersistentNode(statePath + "/parts", buf.bytes().copyBytesArray().toBytes());
@@ -233,7 +233,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
         assertThat(state.getMetaData().getCustoms().get("repositories"), notNullValue());
 
         // check that state was serialized correctly with new version
-        zkState.publish(state, new NoOpAckListener());
+        zkState.publish(new ClusterChangedEvent("", state, null), new NoOpAckListener());
         zkState.stop();
 
         ZooKeeperClusterState zkStateUpdated = buildZooKeeperClusterState(testDiscoveryNodes());

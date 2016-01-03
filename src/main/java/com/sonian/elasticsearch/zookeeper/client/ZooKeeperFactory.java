@@ -40,11 +40,11 @@ public class ZooKeeperFactory extends AbstractComponent {
 
     @Inject public ZooKeeperFactory(Settings settings) {
         super(settings);
-        host = componentSettings.get("host");
+        host = this.settings.get("sonian.elasticsearch.zookeeper.client.host");
         if (host == null) {
             throw new ElasticsearchException("Empty ZooKeeper host name");
         }
-        sessionTimeout = componentSettings.getAsTime("session.timeout", new TimeValue(1, TimeUnit.MINUTES));
+        sessionTimeout = settings.getAsTime("session.timeout", new TimeValue(1, TimeUnit.MINUTES));
     }
 
     public ZooKeeper newZooKeeper() {

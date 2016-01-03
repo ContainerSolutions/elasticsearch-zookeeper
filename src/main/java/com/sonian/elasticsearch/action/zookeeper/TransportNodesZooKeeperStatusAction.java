@@ -19,10 +19,11 @@ package com.sonian.elasticsearch.action.zookeeper;
 import com.sonian.elasticsearch.zookeeper.discovery.ZooKeeperDiscovery;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.action.support.ActionFilters;
-import org.elasticsearch.action.support.nodes.NodeOperationRequest;
-import org.elasticsearch.action.support.nodes.TransportNodesOperationAction;
+import org.elasticsearch.action.support.nodes.BaseNodeRequest;
+import org.elasticsearch.action.support.nodes.TransportNodesAction;
 import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.cluster.ClusterService;
+import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
@@ -33,15 +34,14 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReferenceArray;
-
-import static org.elasticsearch.common.collect.Lists.newArrayList;
 
 /**
  */
 public class TransportNodesZooKeeperStatusAction extends
-        TransportNodesOperationAction<NodesZooKeeperStatusRequest, NodesZooKeeperStatusResponse,
+        TransportNodesAction<NodesZooKeeperStatusRequest, NodesZooKeeperStatusResponse,
                 TransportNodesZooKeeperStatusAction.NodeZooKeeperStatusRequest,
                 NodesZooKeeperStatusResponse.NodeZooKeeperStatusResponse> {
     private final ZooKeeperDiscovery zooKeeperDiscovery;
@@ -49,10 +49,8 @@ public class TransportNodesZooKeeperStatusAction extends
     private static final String ACTION_NAME = "/zookeeper/settings/get";
 
     @Inject
-    public TransportNodesZooKeeperStatusAction(Settings settings, ClusterName clusterName, ThreadPool threadPool,
-                                                ClusterService clusterService, TransportService transportService,
-                                                Discovery discovery, ActionFilters actionFilters) {
-        super(settings, ACTION_NAME, clusterName, threadPool, clusterService, transportService, actionFilters);
+    public TransportNodesZooKeeperStatusAction(Settings settings, ClusterName clusterName, ThreadPool threadPool, ClusterService clusterService, TransportService transportService, ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver, Class<NodesZooKeeperStatusRequest> request, Class<NodeZooKeeperStatusRequest> nodeRequest, String nodeExecutor, Discovery discovery) {
+        super(settings, ACTION_NAME, clusterName, threadPool, clusterService, transportService, actionFilters, indexNameExpressionResolver, request, nodeRequest, nodeExecutor);
         if(discovery instanceof ZooKeeperDiscovery) {
             zooKeeperDiscovery = (ZooKeeperDiscovery) discovery;
         } else {
@@ -61,18 +59,8 @@ public class TransportNodesZooKeeperStatusAction extends
     }
 
     @Override
-    protected String executor() {
-        return ThreadPool.Names.GENERIC;
-    }
-
-    @Override
-    protected NodesZooKeeperStatusRequest newRequest() {
-        return new NodesZooKeeperStatusRequest();
-    }
-
-    @Override
     protected NodesZooKeeperStatusResponse newResponse(NodesZooKeeperStatusRequest nodesZooKeeperStatusRequest, AtomicReferenceArray responses) {
-        final List<NodesZooKeeperStatusResponse.NodeZooKeeperStatusResponse> nodeZooKeeperStatusResponses = newArrayList();
+        final List<NodesZooKeeperStatusResponse.NodeZooKeeperStatusResponse> nodeZooKeeperStatusResponses = new ArrayList<>();
         for (int i = 0; i < responses.length(); i++) {
             Object resp = responses.get(i);
             if (resp instanceof NodesZooKeeperStatusResponse.NodeZooKeeperStatusResponse) {
@@ -82,11 +70,6 @@ public class TransportNodesZooKeeperStatusAction extends
         return new NodesZooKeeperStatusResponse(
                 clusterName, nodeZooKeeperStatusResponses.toArray(
                 new NodesZooKeeperStatusResponse.NodeZooKeeperStatusResponse[nodeZooKeeperStatusResponses.size()]));
-    }
-
-    @Override
-    protected NodeZooKeeperStatusRequest newNodeRequest() {
-        return new NodeZooKeeperStatusRequest();
     }
 
     @Override
@@ -119,7 +102,7 @@ public class TransportNodesZooKeeperStatusAction extends
         return false;
     }
 
-    public static class NodeZooKeeperStatusRequest extends NodeOperationRequest {
+    public static class NodeZooKeeperStatusRequest extends BaseNodeRequest {
 
         private TimeValue zooKeeperTimeout;
 

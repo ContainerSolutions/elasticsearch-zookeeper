@@ -16,8 +16,8 @@
 
 package com.sonian.elasticsearch.action.zookeeper;
 
-import org.elasticsearch.action.support.nodes.NodeOperationResponse;
-import org.elasticsearch.action.support.nodes.NodesOperationResponse;
+import org.elasticsearch.action.support.nodes.BaseNodeResponse;
+import org.elasticsearch.action.support.nodes.BaseNodesResponse;
 import org.elasticsearch.cluster.ClusterName;
 import org.elasticsearch.cluster.node.DiscoveryNode;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -29,7 +29,7 @@ import java.io.IOException;
 
 /**
  */
-public class NodesZooKeeperStatusResponse extends NodesOperationResponse<NodesZooKeeperStatusResponse.NodeZooKeeperStatusResponse> implements ToXContent {
+public class NodesZooKeeperStatusResponse extends BaseNodesResponse<NodesZooKeeperStatusResponse.NodeZooKeeperStatusResponse> implements ToXContent {
 
 
     public NodesZooKeeperStatusResponse(ClusterName clusterName, NodeZooKeeperStatusResponse[] nodes) {
@@ -70,7 +70,7 @@ public class NodesZooKeeperStatusResponse extends NodesOperationResponse<NodesZo
         return builder;
     }
 
-    public static class NodeZooKeeperStatusResponse extends NodeOperationResponse implements ToXContent {
+    public static class NodeZooKeeperStatusResponse extends BaseNodeResponse implements ToXContent {
 
         boolean enabled = false;
 
