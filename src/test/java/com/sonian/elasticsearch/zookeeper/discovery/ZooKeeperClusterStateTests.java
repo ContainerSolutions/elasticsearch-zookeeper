@@ -65,7 +65,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkState.start();
 
-        zkState.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
+        zkState.publish(new ClusterChangedEvent("", initialState, emptyState()), new NoOpAckListener());
 
         final CountDownLatch latch = new CountDownLatch(1);
 
@@ -106,7 +106,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateOld.start();
 
-        zkStateOld.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
+        zkStateOld.publish(new ClusterChangedEvent("", initialState, emptyState()), new NoOpAckListener());
 
         zkStateOld.stop();
 
@@ -114,7 +114,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateNew.start();
 
-        zkStateNew.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
+        zkStateNew.publish(new ClusterChangedEvent("", initialState, emptyState()), new NoOpAckListener());
 
         try {
             zkStateNew.retrieve(null);
@@ -137,7 +137,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateOld.start();
 
-        zkStateOld.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
+        zkStateOld.publish(new ClusterChangedEvent("", initialState, emptyState()), new NoOpAckListener());
 
         zkStateOld.stop();
 
@@ -159,7 +159,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
         zkStateNew.syncClusterState();
 
         // Make sure that new start can be published now
-        zkStateNew.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
+        zkStateNew.publish(new ClusterChangedEvent("", initialState, emptyState()), new NoOpAckListener());
 
         zkStateNew.stop();
 
@@ -186,7 +186,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateOld.start();
 
-        zkStateOld.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
+        zkStateOld.publish(new ClusterChangedEvent("", initialState, emptyState()), new NoOpAckListener());
 
         zkStateOld.stop();
 
@@ -194,7 +194,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
 
         zkStateNew.start();
 
-        zkStateNew.publish(new ClusterChangedEvent("", initialState, null), new NoOpAckListener());
+        zkStateNew.publish(new ClusterChangedEvent("", initialState, emptyState()), new NoOpAckListener());
 
         try {
             zkStateNew.retrieve(null);
@@ -233,7 +233,7 @@ public class ZooKeeperClusterStateTests extends AbstractZooKeeperTests {
         assertThat(state.getMetaData().getCustoms().get("repositories"), notNullValue());
 
         // check that state was serialized correctly with new version
-        zkState.publish(new ClusterChangedEvent("", state, null), new NoOpAckListener());
+        zkState.publish(new ClusterChangedEvent("", state, emptyState()), new NoOpAckListener());
         zkState.stop();
 
         ZooKeeperClusterState zkStateUpdated = buildZooKeeperClusterState(testDiscoveryNodes());

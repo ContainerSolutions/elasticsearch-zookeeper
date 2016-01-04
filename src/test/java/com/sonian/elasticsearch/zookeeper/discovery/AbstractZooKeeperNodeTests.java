@@ -49,9 +49,7 @@ public class AbstractZooKeeperNodeTests extends AbstractZooKeeperTests {
     }
 
     public Node buildNode(String id, Settings settings) {
-        String settingsSource = getClass().getName().replace('.', '/') + ".yml";
         Settings finalSettings = settingsBuilder()
-                .loadFromStream(settingsSource, getClass().getResourceAsStream(settingsSource))
                 .put(defaultSettings())
                 .put(settings)
                 .put("name", id)

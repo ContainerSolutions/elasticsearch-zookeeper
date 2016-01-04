@@ -50,6 +50,8 @@ public class ZooKeeperPlugin extends Plugin {
         }
     }
 
+
+
     public void onModule(RestModule restModule) {
         restModule.addRestAction(RestZooKeeperStatusAction.class);
     }

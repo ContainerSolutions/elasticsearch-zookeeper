@@ -193,8 +193,8 @@ public abstract class AbstractZooKeeperTests {
             IndexRoutingTable.Builder indexRoutingTableBuilder = new IndexRoutingTable.Builder("index");
             for (int j = 0; j < 100; j++) {
                 ShardId shardId = new ShardId("index", j);
-                IndexShardRoutingTable.Builder indexShardRoutingTableBuilder = new IndexShardRoutingTable.Builder(shardId, true);
-                ImmutableShardRouting shardRouting = new ImmutableShardRouting("index", j, "i" + i + "s" + j, true, ShardRoutingState.STARTED, 0L);
+                IndexShardRoutingTable.Builder indexShardRoutingTableBuilder = new IndexShardRoutingTable.Builder(shardId);
+                ShardRouting shardRouting = ShardRouting.newUnassigned("index", j, null, true, new UnassignedInfo(UnassignedInfo.Reason.INDEX_CREATED, null));
                 indexShardRoutingTableBuilder.addShard(shardRouting);
                 indexRoutingTableBuilder.addShard(indexShardRoutingTableBuilder.build(), shardRouting);
             }
@@ -211,6 +211,10 @@ public abstract class AbstractZooKeeperTests {
                 buildZooKeeper(defaultSettings()),
                 getNodesProvider(nodes),
                 ClusterName.clusterNameFromSettings(defaultSettings));
+    }
+
+    protected ClusterState emptyState() {
+        return ClusterState.builder(ClusterName.DEFAULT).build();
     }
 
     protected ZooKeeperClusterState buildZooKeeperClusterState(final DiscoveryNodes nodes, Version clusterStateVersion) {

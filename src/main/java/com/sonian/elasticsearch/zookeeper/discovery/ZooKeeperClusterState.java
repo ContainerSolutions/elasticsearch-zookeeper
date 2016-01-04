@@ -167,6 +167,7 @@ public class ZooKeeperClusterState extends AbstractLifecycleComponent<ZooKeeperC
             }
             ByteBuffer bb = ByteBuffer.wrap(stateBuf);
             final ByteBufferStreamInput buf = new ByteBufferStreamInput(bb);
+            buf.mark(99999999);
             Version stateVersion;
             try {
                 stateVersion = Version.readVersion(buf);
